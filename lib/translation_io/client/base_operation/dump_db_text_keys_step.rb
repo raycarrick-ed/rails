@@ -8,7 +8,7 @@ module TranslationIO
 
         def run
           if @db_fields
-            TranslationIO.info "Extracting Text fields from db."
+            TranslationIO.info "Extracting source fields from database."
 
             FileUtils.mkdir_p(File.join('tmp', 'translation'))
 
@@ -16,7 +16,7 @@ module TranslationIO
             File.open(file_path, 'w') do |file|
               file.puts "def fake"
               extracted_db_entries.each do |entry|
-                file.puts "_(\"#{entry}\")"
+                file.puts "_(\"#{escape_entry(entry)}\")" if entry.present?
               end
               file.puts "end"
             end
@@ -25,6 +25,14 @@ module TranslationIO
 
         protected
 
+        # Make sure we do not break fake method calls with mismatching quotes or 
+        # multi-line strings
+        def escape_entry(entry)          
+          entry.gsub('"', '\"')
+               .gsub("\r\n", '\r\n')
+               .gsub("\n", '\n')
+        end
+
         def extracted_db_entries
           entries = []
 
@@ -32,7 +40,6 @@ module TranslationIO
             table = table_name.constantize
             @db_fields[table_name].each do |column_name|
               db_strings = table.distinct.pluck(column_name)
-              puts "db_strings=#{db_strings.inspect}"
               entries += db_strings
             end
           end
